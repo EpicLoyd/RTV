@@ -28,12 +28,12 @@ local function rtv(ply, args)
 		current['maps'] = {}
 		current['voted'] = 0
 		RandMap() -- get maps
+		inprocess = 1
 	else -- Pending
 		for i=0, #GetPlayers() do
 			if current['voted'] < #GetPlayers() / 2 then
 				SendReliableCommand(i,string.format'chat "%s^7 wants RockTheVote need %i votes at least\n', ply.name, #GetPlayers()/2 - current['voted']]))
 				current['voted'] = current['voted'] + 1
-				inprocess = 1
 			else
 				SendReliableCommand(i,'chat "^1RTV: ^2Select map with !number of map (!1 !2)\n')
 				for k,v in pairs(current['maps']) do
