@@ -2,7 +2,7 @@ local plugin = RegisterPlugin('RTV', '1.0', 10) -- by EpicLoyd
 
 local maplist = {}
 local current = nil
-local inprocess = false
+local inprocess = 0
 local enabled = CreateCvar('japp_rtv_enabled', '0', CvarFlags.ARCHIVE)
 local interval = CreateCvar('japp_rtv_time', '30000', CvarFlags.ARCHIVE)
 local function Init()
@@ -21,21 +21,28 @@ end
 
 local function rtv(ply, args)
  if enabled:GetInteger() == 1 then
-	if inprocess == true then
+	if inprocess == 2 then --- In progress
 		SendReliableCommand(ply.id,'chat "^1RTV: ^2Already in progress\n"')
-	else
-		current = {} -- Clear last session
+	elseif inprocess == 0 then --- Init
+			current = {} -- Clear last session
 		current['maps'] = {}
+		current['voted'] = 0
 		RandMap() -- get maps
+	else -- Pending
 		for i=0, #GetPlayers() do
-		    SendReliableCommand(i,'chat "^1RockTheVote called by ^7' .. ply.name .. ' \n')
-			SendReliableCommand(i,'chat "^1RTV: ^2Select map with !number of map (!1 !2)\n')
-			for k,v in pairs(current['maps']) do
-				SendReliableCommand(i,string.format('chat "%i: %s\n"',k,v['map']))
+			if current['voted'] < #GetPlayers() / 2 then
+				SendReliableCommand(i,string.format'chat "%s^7 wants RockTheVote need %i votes at least\n', ply.name, #GetPlayers()/2 - current['voted']]))
+				current['voted'] = current['voted'] + 1
+				inprocess = 1
+			else
+				SendReliableCommand(i,'chat "^1RTV: ^2Select map with !number of map (!1 !2)\n')
+				for k,v in pairs(current['maps']) do
+					SendReliableCommand(i,string.format('chat "%i: %s\n"',k,v['map']))
+				end
 			end
 		end
-		current['end'] = GetTime() + interval:GetInteger()
-		inprocess = true
+		current['end'] = GetTime() + interval:GetInteger() --- Switch to 'In progress'
+		inprocess = 2
 	end
  else
 	SendReliableCommand(ply.id,'print "^2RTV: ^1Disabled\n"')
@@ -52,7 +59,7 @@ end
 
 
 local function Check()
-	if current == nil then return end
+	if current == 0 or current == 1 then return end
 	if GetTime() >= current['end'] or SumVotes() == #GetPlayers() then
 	local d = 0
 		local res = math.max(current['maps'][1]['voted'],
